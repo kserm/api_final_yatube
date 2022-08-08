@@ -1,5 +1,4 @@
-from rest_framework import viewsets, status, filters, permissions
-from rest_framework.response import Response
+from rest_framework import viewsets, filters, permissions
 from posts.models import Post, Group, Follow
 
 from .serializers import PostSerializer, GroupSerializer, CommentSerializer
@@ -14,16 +13,6 @@ class PostViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthor]
     pagination_class = PostsPagination
 
-    def check_permissions(self, request):
-        if not request.user.is_authenticated:
-            return Response(status=status.HTTP_200_OK)
-        return super().check_permissions(request)
-
-    def check_object_permissions(self, request, obj):
-        if not request.user.is_authenticated:
-            return Response(status=status.HTTP_200_OK)
-        return super().check_object_permissions(request, obj)
-
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
@@ -31,6 +20,7 @@ class PostViewSet(viewsets.ModelViewSet):
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -50,17 +40,13 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user,
                         post=post)
 
-    def check_object_permissions(self, request, obj):
-        if not request.user.is_authenticated:
-            return Response(status=status.HTTP_200_OK)
-        return super().check_object_permissions(request, obj)
-
 
 class FollowViewSet(viewsets.ModelViewSet):
     serializer_class = FollowSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['following__username']
+    http_method_names = ['get', 'post']
 
     def get_queryset(self):
         user = self.request.user
